@@ -143,8 +143,10 @@ def synthesize_cohesive_summary(individual_summaries, candidate_name):
     # Combine individual summaries into a single text for synthesis
     combined_text = " ".join([personalized_intro] + individual_summaries)
     synthesis_prompt = (
-        "Given the individual summaries below, create a cohesive and concise narrative that integrates all key points seamlessly. "
-        "Avoid repetition and ensure the narrative flows logically, capturing the essence of the applicant's qualifications and potential across all value types. '{}'"
+        "Create a summary that maintains a realistic and neutral tone."
+        "The summary should be clear and concise, avoiding the use of overly descriptive language or an abundance of adjectives."
+        "Focus on portraying the applicant's qualifications, experiences, and aspirations accurately, without embellishment."
+        "Present the applicant's story in a way that is factual and objective, ensuring that the narrative is grounded in the applicant's actual accomplishments and stated goals. '{}'"
     ).format(combined_text)
 
     # Call the API or summarization function for synthesis
@@ -181,5 +183,5 @@ for index, row in df.iterrows():
 df['value_prompts_summarized'] = df.apply(lambda row: summarize_justifications(row, list(values_prompts.keys())), axis=1)
 
 # Export the DataFrame to a new CSV, adjust column indices as needed
-output_csv_path = os.path.join(script_dir, 'application_data_updated.csv')
+output_csv_path = os.path.join(script_dir, 'application_data_updated_1.csv')
 df.to_csv(output_csv_path, index=False)
