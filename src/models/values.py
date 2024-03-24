@@ -32,7 +32,7 @@ df = df.iloc[:, columns_to_select]
 # Dictionary of modifications where key is the iloc and value is the text to modify with
 modification_dict = {
     0: 'My name is',
-    1: 'I went to then high school',
+    1: 'I went to the high school',
     2: 'I want to attend the university',
     3: 'At university, I want to major in',
     4: 'After university, I want a career in',
@@ -92,8 +92,8 @@ modification_dict = {
     58: 'A question I would you like to ask the instructor about free speech is',
     59: 'Something that significantly influenced my worldview was',
     60: 'My uprbining was shaped by',
-    61: 'A time when I had to choose between what is right versus what was best for myself was',
-    62: 'My matrix total is'
+    61: 'A time when I had to choose between what is right versus what was best for myself was'
+    # 62: 'My matrix total is'
 }
 
 # Assume df.columns are integer-indexed or you're working with position-based modification
@@ -110,12 +110,12 @@ df['combined_text'] = df.apply(lambda row: combine_text(row, columns_to_select, 
 
 # Updated dictionary of prompts for each value category
 values_prompts = {
-    "Accountable & Reflective": "Analyze an applicant's submission for a scholarship organization seeking first-generation college students. Summarize how the applicant demonstrates accountability and thoughtfulness. Use specific examples and quotes to support your summary. If the applicant's examples do not convincingly display these qualities, or if there are mixed sentiments, accurately reflect this in your summary. '{}'.",
-    "Motivated & Brave": "Review an applicant's submission for a scholarship aimed at first-generation college students. Describe any instances where the applicant shows motivation and bravery. Include specific examples and quotes from their submission. If the submission lacks strong evidence of these qualities, or if it reveals both strengths and weaknesses in these areas, your summary should reflect the actual sentiment. '{}'.",
-    "Teamwork & Adaptability": "Examine an applicant's submission for a scholarship designed for first-generation college students. Highlight instances of teamwork and adaptability. Provide specific examples and quotes from the submission. If the submission does not clearly showcase these qualities, or if it includes both positive and negative aspects, ensure your summary accurately represents this sentiment. '{}'.",
-    "Open-Minded & Empathetic": "Analyze a scholarship applicant's submission focused on first-generation college students. Summarize how the applicant displays open-mindedness and empathy through specific examples and quotes. If the submission lacks convincing evidence or shows a range of sentiments regarding these qualities, your summary should accurately reflect these findings. '{}'.",
-    "Civic Duty & Historical Knowledge": "Review a scholarship applicant's submission for first-generation college students. Detail the applicant's community involvement and historical knowledge using specific examples and quotes. If the applicant's submission does not convincingly demonstrate these qualities, or if it includes both positive and negative sentiments, reflect this accurately in your summary. '{}'.",
-    "Career/Professional Knowledge & Employability": "Examine a scholarship applicant's submission targeting first-generation college students. Describe how the applicant showcases their career or professional knowledge with specific examples and quotes. If the submission lacks strong examples of these qualities, or if it presents a mix of strengths and weaknesses, ensure your summary reflects the true sentiment. '{}'.",
+    "Accountable & Reflective": "Create a concise summary of this scholarship applicant in narrative form, focusing on pivotal examples and quotes that demonstrate accountability and reflectiveness. Aim to highlight the most compelling evidence of these qualities, ensuring a balanced portrayal if both strengths and weaknesses are apparent. '{}'.",
+    "Motivated & Brave": "Create a concise summary of this applicant in narrative form, focusing on pivotal examples and quotes that demonstrate motivation and bravery. Aim to highlight the most compelling evidence of these qualities, ensuring a balanced portrayal if both strengths and weaknesses are apparent. '{}'.",
+    "Teamwork & Adaptability": "Create a concise summary of this applicant in narrative form, focusing on pivotal examples and quotes that demonstrate teamwork and adaptability. Aim to highlight the most compelling evidence of these qualities, ensuring a balanced portrayal if both strengths and weaknesses are apparent. '{}'.",
+    "Open-Minded & Empathetic": "Create a concise summary of this applicant in narrative form, focusing on pivotal examples and quotes that demonstrate open-mindedness and empathy. Aim to highlight the most compelling evidence of these qualities, ensuring a balanced portrayal if both strengths and weaknesses are apparent. '{}'.",
+    "Civic Duty & Historical Knowledge": "Create a concise summary of this applicant in narrative form, focusing on pivotal examples and quotes that demonstrate civic duty and historical knowledge. Aim to highlight the most compelling evidence of these qualities, ensuring a balanced portrayal if both strengths and weaknesses are apparent. '{}'.",
+    "Career/Professional Knowledge & Employability": "Create a concise summary of this applicant in narrative form, focusing on pivotal examples and quotes that demonstrate professionalism and employability. Aim to highlight the most compelling evidence of these qualities, ensuring a balanced portrayal if both strengths and weaknesses are apparent. '{}'.",
 }
 
 # Initialize justifications columns in the DataFrame
@@ -137,36 +137,77 @@ def get_openai_summary_for_justifications(text, prompt_template):
     # Assuming the structure of the response object fits, adjust as necessary
     return response['choices'][0]['message']['content'].strip()
 
-def synthesize_cohesive_summary(individual_summaries, candidate_name):
-    # Personalize the summary by starting with the candidate's name
+def generate_interview_questions(summary):
+
+    prompt = (
+        f"Based on the candidates application summary, generate three concise, direct questions for a follow-up interview. "
+        f"These questions should aim to delve deeper into the candidate's experiences, achievements, and motivations, "
+        f"without being overly descriptive or verbose. Keep the questions straightforward and focused. Summary: '{summary}'"
+    )
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4-1106-preview",  # Ensure this model name aligns with your use case
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant tasked with generating concise, insightful interview questions based on application summaries."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+        generated_text = response.choices[0].message['content'].strip()
+
+        # Processing the generated text to extract and clean up the questions
+        questions = generated_text.split('\n')
+        questions = [question.strip() for question in questions if question.strip()]
+
+        return questions[:3]  # Returning the first three questions for brevity and focus
+    except Exception as e:
+        print(f"Failed to generate interview questions: {e}")
+        return ["An error occurred while generating interview questions."]
+
+def synthesize_cohesive_summary(individual_summaries, candidate_name, interview_questions):
     personalized_intro = f"{candidate_name} is a scholarship candidate who"
-    # Combine individual summaries into a single text for synthesis
     combined_text = " ".join([personalized_intro] + individual_summaries)
+    
     synthesis_prompt = (
-        "Create a summary that maintains a realistic and neutral tone."
-        "The summary should be clear and concise, avoiding the use of overly descriptive language or an abundance of adjectives."
-        "Focus on portraying the applicant's qualifications, experiences, and aspirations accurately, without embellishment."
+        "Create a summary that maintains a realistic and neutral tone. "
+        "The summary should be clear and concise, avoiding the use of overly descriptive language or an abundance of adjectives. "
+        "Focus on portraying the applicant's qualifications, experiences, and aspirations accurately, without embellishment. "
         "Present the applicant's story in a way that is factual and objective, ensuring that the narrative is grounded in the applicant's actual accomplishments and stated goals. '{}'"
     ).format(combined_text)
 
-    # Call the API or summarization function for synthesis
     cohesive_summary = get_openai_summary_for_justifications(combined_text, synthesis_prompt)
-    return cohesive_summary
+
+    # Construct the final narrative with the formatted questions
+    final_narrative = f"{cohesive_summary}\n\nTo delve deeper into their experiences and aspirations, consider asking the following questions during the interview:"
+    
+    for i, question in enumerate(interview_questions, start=1):
+        final_narrative += f"\nQuestion {question}"
+
+    return final_narrative
 
 def summarize_justifications(row, values_prompts_keys):
     individual_summaries = []  # List to hold summaries for each value type
     for value in values_prompts_keys:  # Directly iterate over the keys
         justification_text = row[f'{value} Justification']
-        # Ensure the justification text is correctly passed to the summary function
-        if justification_text.strip() != '':
+        if justification_text.strip() != '':  # Check if justification text is not empty
             summary = get_openai_summary_for_justifications(justification_text, values_prompts[value])
             individual_summaries.append(summary)  # Add to the list
         else:
             individual_summaries.append(f"No data provided for {value}.")  # Placeholder if no justification text
 
     # Synthesize individual summaries into a cohesive narrative
-    candidate_name = row['Full Name']  # Adjust this to match your DataFrame structure for candidate names
-    final_summary = synthesize_cohesive_summary(individual_summaries, candidate_name)
+    candidate_name = row['Full Name']  # Adjust to match your DataFrame structure for candidate names
+    
+    # Generate interview questions based on the combined text from individual summaries
+    interview_questions = generate_interview_questions(" ".join(individual_summaries))
+    
+    # Now call synthesize_cohesive_summary with all required arguments
+    final_summary = synthesize_cohesive_summary(individual_summaries, candidate_name, interview_questions)
+    
     return final_summary
 
 # Analyze each relevant field for each candidate using the 'combined_text' column
