@@ -21,7 +21,7 @@ openai.api_key = config['dorrance_api']['api_key']
 df = pd.read_csv(csv_path)
 
 # Select only the columns that are marked as 'TRUE'
-df = df[df['moving_forward']].head(1)
+df = df[df['moving_forward']].head(10)
 
 # Define the columns to analyze
 columns_to_select = [2,4,6,9,10,11,12,13,14,15,16,18,19,21,22,24,25,27,28,30,31,33,34,35,37,38,40,41,43,44,46,47,49,50,52,53,54,56,57,59,60,62,63,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84]
@@ -129,7 +129,7 @@ def get_openai_summary_for_justifications(text, prompt_template):
         messages=[{"role": "system", "content": "You are a helpful assistant."},
                   {"role": "user", "content": prompt_template.format(text)}],
         temperature=0.7,  # Adjust for predictability
-        # max_tokens=500,  # Control output length for uniformity
+        max_tokens=500,  # Control output length for uniformity
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0
@@ -224,5 +224,5 @@ for index, row in df.iterrows():
 df['value_prompts_summarized'] = df.apply(lambda row: summarize_justifications(row, list(values_prompts.keys())), axis=1)
 
 # Export the DataFrame to a new CSV, adjust column indices as needed
-output_csv_path = os.path.join(script_dir, 'application_data_updated_1.csv')
+output_csv_path = os.path.join(script_dir, 'application_data_updated.csv')
 df.to_csv(output_csv_path, index=False)
